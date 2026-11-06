@@ -1263,3 +1263,47 @@ msgstr "Vitesse :"
 #: cddagl/ui/views/tabbed.py:515
 msgid "Kitten CDDA Launcher self-update"
 msgstr "Mise à jour de Kitten CDDA Launcher"
+
+#: cddagl/ui/views/settings.py:108
+msgid "Orvane"
+msgstr "Orvane"
+
+#: cddagl/ui/views/settings.py:109
+msgid "Connect the game to the Orvane shared world"
+msgstr "Brancher le jeu sur le monde partagé d'Orvane"
+
+#: cddagl/ui/views/settings.py:110
+msgid "Add the Orvane mod to all my existing worlds"
+msgstr "Ajouter le mod Orvane à tous mes mondes existants"
+
+#: cddagl/ui/views/settings.py:112
+msgid "Test mode: count the creatures killed without ever sending them"
+msgstr "Mode essai : compter les bêtes tuées sans jamais les envoyer"
+
+#: cddagl/ui/views/settings.py:113
+msgid "<p>Orvane is a living world that several games share. Before each game, the launcher writes the <strong>orvane</strong> mod, which adds the lineages of this world to the wildlife. When the game closes, it sends the Orvane creatures you killed: an over-hunted species becomes rarer, in every game at once. The launcher stays open while you play, to count at the end.</p><p>For a new world, tick <strong>Orvane</strong> in the list of mods. <a href=\"https://github.com/stonevalleyoff-ai/orvane\">About Orvane</a></p>"
+msgstr "<p>Orvane est un monde vivant que plusieurs jeux partagent. Avant chaque partie, le lanceur écrit le mod <strong>orvane</strong>, qui ajoute les lignées de ce monde à la faune sauvage. Quand le jeu se ferme, il envoie les bêtes d'Orvane que vous avez tuées : une espèce trop chassée se raréfie, dans tous les jeux à la fois. Le lanceur reste ouvert pendant la partie, pour compter à la fin.</p><p>Pour un nouveau monde, cochez <strong>Orvane</strong> dans la liste des mods. <a href=\"https://github.com/stonevalleyoff-ai/orvane\">À propos d'Orvane</a></p>"
+
+#: cddagl/ui/views/settings.py:121
+msgid "Count and send now"
+msgstr "Compter et envoyer maintenant"
+
+#: cddagl/ui/views/settings.py:143
+msgid "Choose the game directory in the main tab first."
+msgstr "Choisissez d'abord le dossier du jeu dans l'onglet principal."
+
+#: cddagl/ui/views/settings.py:146
+msgid "The bridge has not run in this game directory yet: it will at the next launch."
+msgstr "La passerelle n'a pas encore servi dans ce dossier de jeu : elle le fera au prochain lancement."
+
+#: cddagl/ui/views/main.py:643
+msgid "Orvane: reading today's world and writing the mod..."
+msgstr "Orvane : lecture du monde du jour et écriture du mod…"
+
+#: cddagl/ui/views/main.py:650
+msgid "Orvane: counting the creatures killed..."
+msgstr "Orvane : compte des bêtes tuées…"
+
+#: cddagl/ui/views/main.py:619
+msgid "Orvane: {message}"
+msgstr "Orvane : {message}"

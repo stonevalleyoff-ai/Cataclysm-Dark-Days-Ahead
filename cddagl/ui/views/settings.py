@@ -4,10 +4,12 @@ from PySide6.QtCore import (
     Qt, QTimer)
 from PySide6.QtWidgets import (
     QApplication, QWidget, QGridLayout, QGroupBox, QVBoxLayout, QLabel, QLineEdit,
-    QFileDialog, QToolButton, QComboBox, QCheckBox, QHBoxLayout, QSpinBox, QSizePolicy
+    QFileDialog, QToolButton, QComboBox, QCheckBox, QHBoxLayout, QSpinBox, QSizePolicy,
+    QPushButton
 )
 from babel.core import Locale
 
+from cddagl import orvane
 import cddagl.constants as cons
 from cddagl.constants import get_locale_path
 from cddagl.functions import clean_qt_path
@@ -28,14 +30,19 @@ class SettingsTab(QWidget):
         update_settings_group_box = UpdateSettingsGroupBox()
         self.update_settings_group_box = update_settings_group_box
 
+        orvane_settings_group_box = OrvaneSettingsGroupBox()
+        self.orvane_settings_group_box = orvane_settings_group_box
+
         layout = QVBoxLayout()
         layout.addWidget(launcher_settings_group_box)
         layout.addWidget(update_settings_group_box)
+        layout.addWidget(orvane_settings_group_box)
         self.setLayout(layout)
 
     def set_text(self):
         self.launcher_settings_group_box.set_text()
         self.update_settings_group_box.set_text()
+        self.orvane_settings_group_box.set_text()
 
     def get_main_window(self):
         return self.parentWidget().parentWidget().parentWidget()
@@ -46,10 +53,150 @@ class SettingsTab(QWidget):
     def disable_tab(self):
         self.launcher_settings_group_box.disable_controls()
         self.update_settings_group_box.disable_controls()
+        self.orvane_settings_group_box.disable_controls()
 
     def enable_tab(self):
         self.launcher_settings_group_box.enable_controls()
         self.update_settings_group_box.enable_controls()
+        self.orvane_settings_group_box.enable_controls()
+
+
+class OrvaneSettingsGroupBox(QGroupBox):
+    """Orvane : brancher le jeu sur un monde partagé (cddagl/orvane)."""
+
+    def __init__(self):
+        super(OrvaneSettingsGroupBox, self).__init__()
+
+        self.game_running = False
+        layout = QGridLayout()
+
+        def checkbox(key, row, changed):
+            box = QCheckBox()
+            box.setCheckState(Qt.CheckState.Checked if config_true(get_config_value(key, 'False'))
+                else Qt.CheckState.Unchecked)
+            box.checkStateChanged.connect(changed)
+            layout.addWidget(box, row, 0, 1, 2)
+            return box
+
+        self.enabled_checkbox = checkbox('orvane.enabled', 0, self.enabled_changed)
+        self.all_worlds_checkbox = checkbox('orvane.all_worlds', 1, self.all_worlds_changed)
+        self.test_mode_checkbox = checkbox('orvane.test_mode', 2, self.test_mode_changed)
+
+        explanation_label = QLabel()
+        explanation_label.setWordWrap(True)
+        explanation_label.setOpenExternalLinks(True)
+        layout.addWidget(explanation_label, 3, 0, 1, 2)
+        self.explanation_label = explanation_label
+
+        status_label = QLabel()
+        status_label.setWordWrap(True)
+        status_label.setTextFormat(Qt.TextFormat.PlainText)
+        status_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(status_label, 4, 0, 1, 2)
+        self.status_label = status_label
+
+        send_now_button = QPushButton()
+        send_now_button.clicked.connect(self.send_now)
+        layout.addWidget(send_now_button, 5, 0)
+        self.send_now_button = send_now_button
+
+        self.setLayout(layout)
+        self.set_text()
+        self.update_controls()
+
+    def set_text(self):
+        self.setTitle(_('Orvane'))
+        self.enabled_checkbox.setText(_('Connect the game to the Orvane shared world'))
+        self.all_worlds_checkbox.setText(_('Add the Orvane mod to all my existing worlds'))
+        self.test_mode_checkbox.setText(
+            _('Test mode: count the creatures killed without ever sending them'))
+        self.explanation_label.setText(_(
+            '<p>Orvane is a living world that several games share. Before each game, the '
+            'launcher writes the <strong>orvane</strong> mod, which adds the lineages of this '
+            'world to the wildlife. When the game closes, it sends the Orvane creatures you '
+            'killed: an over-hunted species becomes rarer, in every game at once. The launcher '
+            'stays open while you play, to count at the end.</p>'
+            '<p>For a new world, tick <strong>Orvane</strong> in the list of mods. '
+            '<a href="https://github.com/stonevalleyoff-ai/orvane">About Orvane</a></p>'))
+        self.send_now_button.setText(_('Count and send now'))
+        self.refresh_status()
+
+    def showEvent(self, event):
+        self.refresh_status()
+        super(OrvaneSettingsGroupBox, self).showEvent(event)
+
+    def game_dir_group_box(self):
+        try:
+            return self.parentWidget().get_main_tab().game_dir_group_box
+        except AttributeError:
+            return None             # pas encore dans la fenêtre
+
+    def user_directory(self):
+        box = self.game_dir_group_box()
+        if box is None or not box.exe_path:
+            return None
+        return orvane.dossier_utilisateur(getattr(box, 'game_dir', None), box.exe_path)
+
+    def refresh_status(self):
+        cdda = self.user_directory()
+        if cdda is None:
+            self.status_label.setText(_('Choose the game directory in the main tab first.'))
+            return
+        text = orvane.etat(cdda)
+        self.status_label.setText(text if text else _(
+            'The bridge has not run in this game directory yet: it will at the next launch.'))
+
+    def update_controls(self):
+        box = self.game_dir_group_box()
+        busy = box is not None and box.orvane_travail is not None
+        enabled = self.enabled_checkbox.checkState() != Qt.CheckState.Unchecked
+        self.all_worlds_checkbox.setEnabled(enabled)
+        self.test_mode_checkbox.setEnabled(enabled)
+        self.send_now_button.setEnabled(enabled and not busy and not self.game_running)
+
+    def enabled_changed(self, state):
+        set_config_value('orvane.enabled', str(state != Qt.CheckState.Unchecked))
+        self.update_controls()
+
+    def all_worlds_changed(self, state):
+        set_config_value('orvane.all_worlds', str(state != Qt.CheckState.Unchecked))
+
+    def test_mode_changed(self, state):
+        set_config_value('orvane.test_mode', str(state != Qt.CheckState.Unchecked))
+
+    def send_now(self):
+        box = self.game_dir_group_box()
+        cdda = self.user_directory()
+        if box is None or cdda is None or box.orvane_travail is not None:
+            return
+        commandes = orvane.commandes_apres(cdda)
+        if not commandes:
+            self.refresh_status()
+            return
+
+        travail = orvane.Travail(commandes, self)
+
+        def fini(reussi, texte):
+            box.orvane_travail = None
+            self.refresh_status()
+            bilan = orvane.resume(texte)
+            if bilan:
+                self.status_label.setText(bilan + '\n\n' + self.status_label.text())
+            self.update_controls()
+
+        travail.fini.connect(fini)
+        travail.finished.connect(travail.deleteLater)
+        box.orvane_travail = travail       # le lanceur attend la fin avant de lancer le jeu
+        self.update_controls()
+        travail.start()
+
+    def disable_controls(self):
+        self.game_running = True
+        self.update_controls()
+
+    def enable_controls(self):
+        self.game_running = False
+        self.update_controls()
 
 
 class LauncherSettingsGroupBox(QGroupBox):

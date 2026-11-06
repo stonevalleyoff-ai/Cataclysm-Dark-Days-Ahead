@@ -8,5 +8,7 @@ pywinutils
 markdown2
 Werkzeug
 requests
+# Orvane : lire les sauvegardes compressées du jeu (.sav.zzip)
+zstandard
 
 pylzma

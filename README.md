@@ -1,4 +1,16 @@
-# Kitten CDDA Launcher
+# Kitten CDDA Launcher, avec Orvane
+
+Cette copie du [Kitten CDDA Launcher](https://github.com/Fris0uman/CDDA-Game-Launcher) branche le jeu sur [Orvane](https://github.com/stonevalleyoff-ai/orvane), un monde vivant que plusieurs jeux partagent. Tout le reste du lanceur est celui d'origine.
+
+**Ce qu'elle ajoute.** Dans l'onglet des réglages, la section « Orvane » :
+- **Brancher le jeu sur le monde partagé d'Orvane.** Avant chaque partie, le lanceur lit le monde du jour et écrit le mod `orvane`, qui ajoute les lignées d'Orvane à la faune sauvage (forêts, marais, rivières, étangs, grottes, côte). Quand le jeu se ferme, il compte dans les sauvegardes les bêtes d'Orvane tuées et les envoie à Orvane, où une espèce trop chassée se raréfie, dans tous les jeux à la fois. Le lanceur reste alors ouvert pendant la partie, pour compter à la fin.
+- **Ajouter le mod Orvane à tous mes mondes existants.** Sinon, cochez « Orvane » dans la liste des mods en créant un monde.
+- **Mode essai.** Le lanceur compte, mais n'envoie jamais rien : pour essayer sans peser sur le monde partagé.
+- **Compter et envoyer maintenant**, et l'état de la passerelle : le cycle du monde utilisé, les lots en attente, le dernier envoi.
+
+Le code est dans `cddagl/orvane/` : `passerelle.py` est copié tel quel du dépôt d'Orvane (`traducteurs/cataclysm/`, où sont son mode d'emploi et son banc d'essai) et reste sous la licence d'Orvane, [PolyForm Shield 1.0.0](https://polyformproject.org/licenses/shield/1.0.0) (Required Notice: Copyright StoneValley). Le reste du lanceur reste sous licence MIT. Le paquet `zstandard` (`requirements.txt`) lit les sauvegardes compressées du jeu. Cette copie se met à jour depuis ses propres versions, pas depuis celles du lanceur d'origine, qui retireraient Orvane.
+
+---
 
 A [Cataclysm: Dark Days Ahead](https://cataclysmdda.org/) launcher with additional features.
 

@@ -49,6 +49,7 @@ from cddagl.win32 import (
     find_process_with_file_handle, activate_window, process_id_from_path, wait_for_pid,
     get_documents_directory
 )
+from cddagl import orvane
 
 logger = logging.getLogger('cddagl')
 
@@ -124,6 +125,10 @@ class GameDirGroupBox(QGroupBox):
         self.game_process = None
         self.game_process_id = None
         self.game_started = False
+
+        # Orvane : la passerelle au travail, et le mod déjà écrit pour ce lancement.
+        self.orvane_travail = None
+        self.orvane_pret = False
 
         layout = QGridLayout()
 
@@ -423,6 +428,13 @@ class GameDirGroupBox(QGroupBox):
         if self.game_started:
             return self.focus_game()
 
+        if self.orvane_travail is not None:
+            return
+
+        if orvane.actif() and not self.orvane_pret:
+            return self.orvane_avant_partie()
+        self.orvane_pret = False
+
         if config_true(get_config_value('backup_on_launch', 'False')):
             main_tab = self.get_main_tab()
             backups_tab = main_tab.get_backups_tab()
@@ -494,7 +506,8 @@ antivirus whitelist or select the action to trust this binary when detected.</p>
         self.game_process = game_process
         self.game_started = True
 
-        if not config_true(get_config_value('keep_launcher_open', 'False')):
+        # Avec Orvane, le lanceur reste ouvert : il compte les bêtes tuées quand le jeu se ferme.
+        if not (config_true(get_config_value('keep_launcher_open', 'False')) or orvane.actif()):
             self.get_main_window().close()
         else:
             main_window = self.get_main_window()
@@ -581,6 +594,60 @@ antivirus whitelist or select the action to trust this binary when detected.</p>
                 name=_('after_end'))
 
             backups_tab.backup_saves(name)
+
+        self.orvane_apres_partie()
+
+    def orvane_dossier(self):
+        return orvane.dossier_utilisateur(self.game_dir, self.exe_path)
+
+    def orvane_lancer(self, commandes, message, suite=None):
+        """Fait travailler la passerelle sans figer le lanceur, puis appelle suite()."""
+        status_bar = self.get_main_window().statusBar()
+        if not commandes:
+            if suite is not None:
+                suite()
+            return
+        status_bar.showMessage(message)
+        self.launch_game_button.setEnabled(False)
+
+        travail = orvane.Travail(commandes, self)
+
+        def fini(reussi, texte):
+            self.orvane_travail = None
+            bilan = orvane.resume(texte)
+            if bilan:
+                status_bar.showMessage(_('Orvane: {message}').format(message=bilan))
+            self.launch_game_button.setEnabled(
+                self.exe_path is not None and os.path.isfile(self.exe_path))
+            if not reussi:
+                logger.warning('Orvane : %s', texte)
+            if suite is not None:
+                suite()
+
+        travail.fini.connect(fini)
+        travail.finished.connect(travail.deleteLater)
+        self.orvane_travail = travail
+        travail.start()
+
+    def orvane_avant_partie(self):
+        """Avant de lancer le jeu : écrire le mod depuis le monde du jour. Le jeu part même si
+        Orvane est injoignable : la passerelle reprend alors sa dernière copie du monde."""
+        if self.exe_path is None or not os.path.isfile(self.exe_path):
+            return self.launch_game_process()
+
+        def suite():
+            self.orvane_pret = True
+            self.launch_game()
+
+        self.orvane_lancer(orvane.commandes_avant(self.orvane_dossier()),
+            _("Orvane: reading today's world and writing the mod..."), suite)
+
+    def orvane_apres_partie(self):
+        """Quand le jeu s'est fermé : compter les bêtes d'Orvane tuées et les envoyer."""
+        if not orvane.actif() or self.orvane_travail is not None or not self.exe_path:
+            return
+        self.orvane_lancer(orvane.commandes_apres(self.orvane_dossier()),
+            _('Orvane: counting the creatures killed...'))
 
     def get_main_tab(self) -> MainTab:
         return self.parentWidget()
@@ -957,6 +1024,8 @@ antivirus whitelist or select the action to trust this binary when detected.</p>
                 self.get_main_window().setWindowState(Qt.WindowState.WindowActive)
 
                 self.update_saves()
+
+                self.orvane_apres_partie()
 
                 if config_true(get_config_value('backup_on_end', 'False')):
                     backups_tab.prune_auto_backups()

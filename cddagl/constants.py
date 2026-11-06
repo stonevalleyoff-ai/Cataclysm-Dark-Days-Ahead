@@ -17,7 +17,9 @@ GITHUB_XRL_RESET = 'X-RateLimit-Reset'
 CDDA_RELEASE_TAGS = '/repos/CleverRaven/Cataclysm-DDA/git/refs/tags'
 CDDA_RELEASES = '/repos/CleverRaven/Cataclysm-DDA/releases'
 CDDA_RELEASE_BY_TAG = lambda tag: f'/repos/CleverRaven/Cataclysm-DDA/releases/tags/{tag}'
-CDDAGL_LATEST_RELEASE = '/repos/Fris0uman/CDDA-Game-Launcher/releases/latest'
+# Cette copie du lanceur (avec Orvane) se met à jour depuis ses propres versions : une version
+# du lanceur d'origine la remplacerait et retirerait Orvane.
+CDDAGL_LATEST_RELEASE = '/repos/stonevalleyoff-ai/Cataclysm-Dark-Days-Ahead/releases/latest'
 
 CHANGELOG_URL = 'https://api.github.com/search/issues?q=repo%3Acleverraven/Cataclysm-DDA+is%3Apr+is%3Amerged&per_page='
 
