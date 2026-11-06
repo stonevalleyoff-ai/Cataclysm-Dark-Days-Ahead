@@ -43,26 +43,54 @@ jobs:
       - name: Essayer Orvane depuis le code (mode essai, rien n'est envoyé)
         run: python tests/orvane_essai.py
 
+      # Le lanceur tout entier, depuis le code : ses erreurs s'y lisent en clair.
+      - name: Démarrer le lanceur depuis le code, sans écran
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $dossier = Join-Path $env:LOCALAPPDATA 'CDDA Game Launcher'
+          Remove-Item -Recurse -Force $dossier -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath python -ArgumentList '-m', 'cddagl' -PassThru -RedirectStandardOutput sortie.txt -RedirectStandardError erreurs.txt
+          Start-Sleep -Seconds 40
+          $arrete = $p.HasExited
+          if (-not $arrete) { Stop-Process -Id $p.Id -Force }
+          Start-Sleep -Seconds 2
+          Write-Host '--- sortie et erreurs'; Get-Content sortie.txt, erreurs.txt -ErrorAction SilentlyContinue
+          $journal = Join-Path $dossier 'app.log'
+          if (-not (Test-Path $journal)) { Write-Error "pas de journal : le lanceur n'a pas démarré"; exit 1 }
+          Write-Host '--- journal'; Get-Content $journal
+          if (Select-String -Path $journal -Pattern 'Global error' -Quiet) { Write-Error "le lanceur a rencontré une erreur"; exit 1 }
+          if ($arrete) { Write-Error "le lanceur s'est arrêté tout seul (code $($p.ExitCode))"; exit 1 }
+          Write-Host "Le lanceur a démarré depuis le code et tournait encore après 40 secondes."
+
       - name: Fabriquer launcher.exe
         run: |
           python setup.py freeze
           if (-not (Test-Path dist/launcher.exe)) { Write-Error "launcher.exe n'a pas été fabriqué"; exit 1 }
           Get-Item dist/launcher.exe | Format-List Name, Length
+          Write-Host '--- modules manquants qui comptent'
+          Select-String -Path build/launcher/warn-launcher.txt -Pattern "missing module named '?(zstandard|PySide6|shiboken6|sqlalchemy|alembic|arrow|markdown2|rarfile|babel|werkzeug|requests|win32|pywintypes|winutils|cddagl)" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
 
       - name: Démarrer launcher.exe sans écran
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
+          $dossier = Join-Path $env:LOCALAPPDATA 'CDDA Game Launcher'
+          Remove-Item -Recurse -Force $dossier -ErrorAction SilentlyContinue
+          $journal = Join-Path $dossier 'app.log'
           $p = Start-Process -FilePath dist/launcher.exe -PassThru
-          Start-Sleep -Seconds 45
+          # Un exécutable PyInstaller « en un fichier » se décompresse d'abord : cela peut prendre du temps.
+          for ($i = 0; $i -lt 24 -and -not (Test-Path $journal) -and -not $p.HasExited; $i++) { Start-Sleep -Seconds 5 }
+          Start-Sleep -Seconds 20
+          Write-Host '--- fenêtres ouvertes'
+          Get-Process | Where-Object { $_.MainWindowTitle } | Format-Table Id, ProcessName, MainWindowTitle -AutoSize | Out-String -Width 300 | Write-Host
           $arrete = $p.HasExited
-          if (-not $arrete) { Stop-Process -Id $p.Id -Force }
-          $journal = Join-Path $env:LOCALAPPDATA 'CDDA Game Launcher\app.log'
+          Get-Process launcher -ErrorAction SilentlyContinue | Stop-Process -Force
           if (-not (Test-Path $journal)) { Write-Error "pas de journal : le lanceur n'a pas démarré"; exit 1 }
-          Get-Content $journal
+          Write-Host '--- journal'; Get-Content $journal
           if (Select-String -Path $journal -Pattern 'Global error' -Quiet) { Write-Error "le lanceur a rencontré une erreur au démarrage"; exit 1 }
           if ($arrete) { Write-Error "le lanceur s'est arrêté tout seul (code $($p.ExitCode))"; exit 1 }
-          Write-Host "Le lanceur a démarré et tournait encore après 45 secondes."
+          Write-Host "Le lanceur a démarré et tournait encore."
 
       - uses: actions/upload-artifact@v4
         with:
