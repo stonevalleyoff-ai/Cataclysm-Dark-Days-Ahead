@@ -2,6 +2,8 @@
 
 Cette copie du [Kitten CDDA Launcher](https://github.com/Fris0uman/CDDA-Game-Launcher) branche le jeu sur [Orvane](https://github.com/stonevalleyoff-ai/orvane), un monde vivant que plusieurs jeux partagent. Tout le reste du lanceur est celui d'origine.
 
+**Télécharger :** [`launcher.exe`, la dernière fabrication](https://github.com/stonevalleyoff-ai/Cataclysm-Dark-Days-Ahead/releases/tag/orvane-dernier). Il est fabriqué et essayé sous Windows à chaque modification (`.github/workflows/fabrication.yml`, et `tests/orvane_essai.py` pour la partie Orvane). Comme tout exécutable fabriqué avec PyInstaller et non signé, il peut déclencher une fausse alerte de l'antivirus.
+
 **Ce qu'elle ajoute.** Dans l'onglet des réglages, la section « Orvane » :
 - **Brancher le jeu sur le monde partagé d'Orvane.** Avant chaque partie, le lanceur lit le monde du jour et écrit le mod `orvane`, qui ajoute les lignées d'Orvane à la faune sauvage (forêts, marais, rivières, étangs, grottes, côte). Quand le jeu se ferme, il compte dans les sauvegardes les bêtes d'Orvane tuées et les envoie à Orvane, où une espèce trop chassée se raréfie, dans tous les jeux à la fois. Le lanceur reste alors ouvert pendant la partie, pour compter à la fin.
 - **Ajouter le mod Orvane à tous mes mondes existants.** Sinon, cochez « Orvane » dans la liste des mods en créant un monde.

@@ -1,0 +1,78 @@
+# Fabrique launcher.exe sous Windows à chaque envoi, l'essaie, et le publie dans la
+# pré-version « orvane-dernier » :
+# https://github.com/stonevalleyoff-ai/Cataclysm-Dark-Days-Ahead/releases/tag/orvane-dernier
+#
+# Une pré-version n'est pas vue par la mise à jour automatique du lanceur (elle ne lit que la
+# dernière vraie version) : publier ici ne pousse rien chez les joueurs.
+
+name: Fabrication du lanceur
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fabrication-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: launcher.exe (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      # Le lanceur d'origine est fabriqué avec Python 3.10 ; setup.py a encore besoin de distutils.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          # pylzma n'est importé nulle part et ne s'installe plus sans compilateur : on le laisse.
+          Get-Content requirements.txt | Where-Object { $_ -notmatch '^\s*pylzma' } | Set-Content requirements-ci.txt
+          pip install -r requirements-ci.txt -r requirements-dev.txt pyinstaller
+          pip list
+
+      - name: Essayer Orvane depuis le code (mode essai, rien n'est envoyé)
+        run: python tests/orvane_essai.py
+
+      - name: Fabriquer launcher.exe
+        run: |
+          python setup.py freeze
+          if (-not (Test-Path dist/launcher.exe)) { Write-Error "launcher.exe n'a pas été fabriqué"; exit 1 }
+          Get-Item dist/launcher.exe | Format-List Name, Length
+
+      - name: Démarrer launcher.exe sans écran
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $p = Start-Process -FilePath dist/launcher.exe -PassThru
+          Start-Sleep -Seconds 45
+          $arrete = $p.HasExited
+          if (-not $arrete) { Stop-Process -Id $p.Id -Force }
+          $journal = Join-Path $env:LOCALAPPDATA 'CDDA Game Launcher\app.log'
+          if (-not (Test-Path $journal)) { Write-Error "pas de journal : le lanceur n'a pas démarré"; exit 1 }
+          Get-Content $journal
+          if (Select-String -Path $journal -Pattern 'Global error' -Quiet) { Write-Error "le lanceur a rencontré une erreur au démarrage"; exit 1 }
+          if ($arrete) { Write-Error "le lanceur s'est arrêté tout seul (code $($p.ExitCode))"; exit 1 }
+          Write-Host "Le lanceur a démarré et tournait encore après 45 secondes."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-orvane
+          path: dist/launcher.exe
+
+      - name: Publier dans la pré-version « orvane-dernier »
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete orvane-dernier --yes --cleanup-tag 2>$null
+          $notes = "Le lanceur Kitten avec Orvane (onglet des réglages, section « Orvane »), fabriqué automatiquement depuis la branche $env:GITHUB_REF_NAME, commit $env:GITHUB_SHA. Version d'essai : cochez le mode essai pour vos premières parties."
+          gh release create orvane-dernier dist/launcher.exe --prerelease --target $env:GITHUB_SHA --title "Lanceur avec Orvane (dernière fabrication)" --notes $notes
