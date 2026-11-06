@@ -35,9 +35,8 @@ jobs:
       - name: Installer les dépendances
         run: |
           python -m pip install --upgrade pip
-          # pylzma n'est importé nulle part et ne s'installe plus sans compilateur : on le laisse.
-          Get-Content requirements.txt | Where-Object { $_ -notmatch '^\s*pylzma' } | Set-Content requirements-ci.txt
-          pip install -r requirements-ci.txt -r requirements-dev.txt pyinstaller
+          # pylzma (py7zlib, pour les packs de sons) n'a pas de paquet tout fait : il se compile ici.
+          pip install -r requirements.txt -r requirements-dev.txt pyinstaller
           pip list
 
       - name: Essayer Orvane depuis le code (mode essai, rien n'est envoyé)
